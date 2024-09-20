@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# IntelliJ
+.idea/
+.run/
+*.iml
+
+# Visual Studio Code
+.vscode/
+.vsls.json
+# vscode database functionality support files
+*.session.sql
+
+/.project
+
+# Sensitive credentials
+*-credentials.yaml
+
+# Build output
+/target/
