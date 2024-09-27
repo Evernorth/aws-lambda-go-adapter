@@ -6,12 +6,12 @@ only HTTP triggers are supported, but additional triggers may be supported in th
 Lambda Function in AWS:
 1. The main function calls the lambda.Start function, passing in the Handler function.
 2. AWS Lambda invokes the Handler function when an HTTP request is received.
-![diagram1](https://git.express-scripts.com/ExpressScripts/aws-lambda-go-adapter/blob/develop/docs/images/diagram1.png)
+![diagram1](docs/images/diagram1.png)
 
 Testing a Lambda Function outside of AWS:
 1. The main function calls the httpadapter.Start function, passing in the Handler function and the port number to listen on.
 2. The httpadapter listens for incoming HTTP requests on the specified port and invokes the Handler function when a request is received.
-![diagram2](https://git.express-scripts.com/ExpressScripts/aws-lambda-go-adapter/blob/develop/docs/images/diagram2.png)
+![diagram2](docs/images/diagram2.png)
 
 ## Installation
 ```go get -u github.com/Evernorth/aws-lambda-go-adapter```
