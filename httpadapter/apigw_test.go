@@ -16,7 +16,7 @@ func TestApigwPost(t *testing.T) {
 	method := "POST"
 	path := "/test"
 	reqBody := uuid.NewString()
-	contentType := "text/html"
+	contentType := "text/plain"
 
 	// Create the mock handler
 	respStatusCode := 200
@@ -50,7 +50,7 @@ func TestApigwGet(t *testing.T) {
 
 	method := "GET"
 	path := "/test"
-	contentType := "text/html"
+	contentType := "text/plain"
 
 	// Create the mock handler
 	respStatusCode := 200
