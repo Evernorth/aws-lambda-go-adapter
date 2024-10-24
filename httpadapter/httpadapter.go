@@ -1,3 +1,8 @@
+/*
+Package httpadapter makes it easy to test a Golang AWS Lambda outside of AWS, without needing Docker, by providing HTTP trigger support.
+
+See documentation: https://pkg.go.dev/github.com/Evernorth/aws-lambda-go-adapter
+*/
 package httpadapter
 
 import (

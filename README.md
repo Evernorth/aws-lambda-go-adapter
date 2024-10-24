@@ -1,8 +1,15 @@
 # aws-lambda-go-adapter
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/Evernorth/aws-lambda-go-adapter)](https://goreportcard.com/report/github.com/Evernorth/aws-lambda-go-adapter)
+[![GoDoc](https://godoc.org/github.com/Evernorth/aws-lambda-go-adapter?status.svg)](https://godoc.org/github.com/Evernorth/aws-lambda-go-adapter)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Release](https://img.shields.io/github/v/release/Evernorth/aws-lambda-go-adapter)](https://github.com/Evernorth/aws-lambda-go-adapter/releases)
+
+## Description
 This module makes it easy to test a Golang AWS Lambda outside of AWS, without needing Docker.  Currently, 
 only HTTP triggers are supported, but additional triggers may be supported in the future.
 
-## How it works
+### How it works
 Lambda Function in AWS:
 1. The main function calls the lambda.Start function, passing in the Handler function.
 2. AWS Lambda invokes the Handler function when an HTTP request is received.
@@ -13,14 +20,15 @@ Testing a Lambda Function outside of AWS:
 2. The httpadapter listens for incoming HTTP requests on the specified port and invokes the Handler function when a request is received.
 ![diagram2](docs/images/diagram2.png)
 
-## Installation
-```go get -u github.com/Evernorth/aws-lambda-go-adapter```
-
+   
 ## Features
 * Supports APIGatewayV2HTTP, APIGatewayProxy, and ALBTargetGroup events.
 * Supports handler functions with and without context.Context parameters.
 * Supports both values and pointers for handler function request events.
 * Supports both values and pointers for handler function response events.
+
+## Installation
+```go get -u github.com/Evernorth/aws-lambda-go-adapter```
 
 ## Usage
 ```
