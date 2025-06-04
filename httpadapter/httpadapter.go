@@ -37,22 +37,67 @@ func SetLogger(l *slog.Logger) {
 	logger = l
 }
 
+type adapterOptions struct {
+	//baseContext                      context.Context
+	enableSIGTERM bool
+	sigtermFuncs  []func()
+}
+
+type Option func(*adapterOptions)
+
 // Start starts the HTTP server on the specified port and listens for incoming requests.  When a request is received,
 // it is converted to the appropriate Lambda event type and passed to the handler function.  The response from the
 // handler function is then converted to an HTTP response and returned to the client.
 func Start(port int, handler interface{}) {
+	StartWithOptions(port, handler)
+}
+
+// StartWithOptions starts the HTTP server on the specified port and listens for incoming requests.  When a request is received,
+// it is converted to the appropriate Lambda event type and passed to the handler function.  The response from the
+// handler function is then converted to an HTTP response and returned to the client.
+func StartWithOptions(port int, handler interface{}, options ...Option) {
+	//if h, ok := handler.(*adapterOptions); ok {
+	//	return h
+	//}
+	opts := &adapterOptions{}
+	for _, option := range options {
+		option(opts)
+	}
+
 	reflectHandler(handler)
 
 	switch delegateHandlerType {
 	case apigwV2HandlerType:
-		listenAndServe(port, handleRequestForApigwV2)
+		listenAndServe(port, handleRequestForApigwV2, opts)
 	case albHandlerType:
-		listenAndServe(port, handleRequestForAlb)
+		listenAndServe(port, handleRequestForAlb, opts)
 	case apigwHandlerType:
-		listenAndServe(port, handleRequestForApigw)
+		listenAndServe(port, handleRequestForApigw, opts)
 	default:
 		panic("unsupported handler type")
 	}
+}
+
+// WithEnableSIGTERM enables SIGTERM behavior with the HTTP Server for use with the provided handler function(s).
+// The HTTP server will listen for SIGTERM signals and run the provided callback functions before
+// gracefully shutting down and performing cleanup tasks before the server is terminated. If the server
+// does not shut down within a certain time frame (usually 500ms), a SIGKILL signal will forcefully terminate
+// the server (similar to how AWS Lambda handles function shutdowns).
+// SIGKILL will occur ~500ms after SIGTERM.
+// Optionally, an array of callback functions to run on SIGTERM may be provided.
+//
+// Usage:
+//
+//	httpadapter.StartWithOptions(8080, Handler,
+//		lambda.WithEnableSIGTERM(func() {
+//			log.Print("HTTP server shutting down...")
+//		})
+//	)
+func WithEnableSIGTERM(callbacks ...func()) Option {
+	return Option(func(opts *adapterOptions) {
+		opts.sigtermFuncs = append(opts.sigtermFuncs, callbacks...)
+		opts.enableSIGTERM = true
+	})
 }
 
 // reflectHandler reflects the handler function to determine the input and output event types, and whether a context is
