@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
@@ -22,49 +21,28 @@ func listenAndServe(port int, handler func(httpResponseWriter http.ResponseWrite
 		Handler: nil, // Use the typical defaultServerMux with the handler set by http.HandleFunc
 	}
 
-	if !opts.enableSIGTERM {
-		defaultListenAndServe(server) //port, handler)
-	} else {
+	if opts.enableSIGTERM {
 		sigtermListenAndServe(server, opts)
+	} else {
+		defaultListenAndServe(server)
 	}
 }
 
-func defaultListenAndServe(server *http.Server) { //port int, handler func(httpResponseWriter http.ResponseWriter, httpRequest *http.Request)) {
-
-	//http.HandleFunc("/", handler)
-	//portStr := ":" + strconv.Itoa(port)
-	//err := http.ListenAndServe(portStr, nil)
-	//err := server.ListenAndServe()
-	//if err != nil {
-	//	logger.Error("Could not start http listener.",
-	//		slog.Any("err", err))
-	//	panic(err)
-	//}
-	if err := server.ListenAndServe(); err != nil { //&& err != http.ErrServerClosed {
+func defaultListenAndServe(server *http.Server) {
+	// start the server and ignore the error if it is http.ErrServerClosed from Shutdown
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("Could not start http listener.", slog.Any("err", err))
 		panic(err)
 	}
 }
 
 func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
-
-	registerSigtermFuncs(opts.sigtermFuncs)
-
 	// Create a context that cancels on SIGTERM or SIGINT
 	sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	//http.HandleFunc("/", handler)
-	//portStr := ":" + strconv.Itoa(port)
-	//server := &http.Server{
-	//	Addr:    portStr,
-	//	Handler: nil, // Use the typical defaultServerMux with the handler set by http.HandleFunc
-	//}
+	// Start the server in a goroutine
 	go func() {
-		//if err := server.ListenAndServe(); err != nil { //&& err != http.ErrServerClosed {
-		//	logger.Error("Could not start http listener.", slog.Any("err", err))
-		//	panic(err)
-		//}
 		defaultListenAndServe(server)
 	}()
 
@@ -72,31 +50,37 @@ func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
 	<-sigCtx.Done()
 	logger.Info("SIGTERM: Shutting server down gracefully...")
 
-	// Perform cleanup with a timeout with a 500ms limit like AWS Lambda SIGTERM behavior
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	// Create a context with a timeout for a limited clean server shutdown (5s should be plenty, right?)
+	// Shutdown usually completes much faster, of course.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Graceful server shutdown failed", slog.Any("err", err))
+		logger.Error("SIGTERM: Graceful server shutdown failed", slog.Any("err", err))
 	}
+	logger.Info("SIGTERM: Server shutdown gracefully")
 
-	logger.Info("Server shutdown gracefully")
-
-	//TODO: Verify app cleanup is done after the server is shutdown.
-	// If not, will need to call cleanupFuncs here.
-	logger.Info("Application cleanup completed")
-}
-
-// registerSigtermFuncs configures an optional list of sigtermHandlers to run on HTTP Server shutdown.
-func registerSigtermFuncs(sigtermFuncs []func()) {
-	// optionally register SIGTERM handlers
-	if len(sigtermFuncs) > 0 {
-		signaled := make(chan os.Signal, 1)
-		signal.Notify(signaled, syscall.SIGTERM)
+	// Perform cleanup with a 500ms limit like AWS Lambda SIGTERM behavior. This will help ensure
+	// that cleanup functions can be locally tested with the same behavior as in AWS Lambda.
+	if len(opts.sigtermFuncs) > 0 {
+		logger.Info("SIGTERM: running functions (mimicking the 500ms AWS Lambda limit)")
+		timedCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		done := make(chan struct{})
 		go func() {
-			<-signaled
-			for _, f := range sigtermFuncs {
+			for _, f := range opts.sigtermFuncs {
 				f()
 			}
+			close(done)
 		}()
+		select {
+		case <-done:
+			logger.Info("SIGTERM: functions completed")
+		case <-timedCtx.Done():
+			//Panic too much?  It's more attention-grabbing than an error log.
+			panic("SIGKILL: functions did not complete within the AWS Lambda limit")
+		}
 	}
+
+	logger.Info("SIGTERM: Completed successfully, exiting...")
 }

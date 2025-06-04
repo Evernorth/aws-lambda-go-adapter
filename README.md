@@ -31,6 +31,7 @@ Testing a Lambda Function outside of AWS:
 ```go get -u github.com/Evernorth/aws-lambda-go-adapter```
 
 ## Usage
+### Start
 ```
 package main
 
@@ -68,6 +69,59 @@ func main() {
 		lambda.Start(Handler)
 	} else {
 		httpadapter.Start(8080, Handler)
+	}
+}
+```
+### StartWithOptions WithEnableSIGTERM
+This is useful for application cleanup logic needed during graceful shutdown. The httpadapter will mimic the AWS Lambda behavior of allowing ~500ms for cleanup before it is terminated. 
+```
+package main
+
+import (
+	"context"
+	"github.com/Evernorth/aws-lambda-go-adapter/httpadapter"
+	"github.com/Evernorth/aws-lambda-go-adapter/pkg/util"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"net/http"
+)
+
+// Handler is the Lambda handler function.  It returns a 200 status code with a "Hello, World!" message for GET requests,
+// and a 405 status code for all other requests.
+func Handler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+
+	if request.RequestContext.HTTP.Method == http.MethodGet {
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: http.StatusOK,
+			Body:       "Hello, World!",
+			Headers: map[string]string{
+				"Content-Type": "text/html",
+			},
+		}, nil
+	}
+
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: http.StatusMethodNotAllowed,
+		Body:       "Method not allowed",
+	}, nil
+}
+
+func cleanup() {
+    // Perform any necessary cleanup here, such as closing database connections or releasing resources.
+    // This function is called during graceful shutdown.
+}
+
+func main() {
+	if util.IsLambdaRuntime() { 
+	    // Start AWS Lambda function with SIGTERM support for graceful shutdown. 
+	    // Cleanup logic has ~500ms to complete before it's terminated with a Lambda SIGKILL 
+	    lambda.StartWithOptions(Handler, 
+	        lambda.WithEnableSIGTERM(cleanup))
+	} else {
+	    // Start HTTP server with SIGTERM support for graceful shutdown.
+	    // Cleanup logic has ~500ms to complete before it's terminated with a "SIGKILL" panic
+	    httpadapter.StartWithOptions(8080, Handler,
+	        httpadapter.WithEnableSIGTERM(cleanup))
 	}
 }
 ```

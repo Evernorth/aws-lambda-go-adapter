@@ -48,6 +48,7 @@ type Option func(*adapterOptions)
 // Start starts the HTTP server on the specified port and listens for incoming requests.  When a request is received,
 // it is converted to the appropriate Lambda event type and passed to the handler function.  The response from the
 // handler function is then converted to an HTTP response and returned to the client.
+// See StartWithOptions for other start options.
 func Start(port int, handler interface{}) {
 	StartWithOptions(port, handler)
 }
@@ -56,15 +57,13 @@ func Start(port int, handler interface{}) {
 // it is converted to the appropriate Lambda event type and passed to the handler function.  The response from the
 // handler function is then converted to an HTTP response and returned to the client.
 func StartWithOptions(port int, handler interface{}, options ...Option) {
-	//if h, ok := handler.(*adapterOptions); ok {
-	//	return h
-	//}
+
+	reflectHandler(handler)
+
 	opts := &adapterOptions{}
 	for _, option := range options {
 		option(opts)
 	}
-
-	reflectHandler(handler)
 
 	switch delegateHandlerType {
 	case apigwV2HandlerType:
@@ -78,24 +77,21 @@ func StartWithOptions(port int, handler interface{}, options ...Option) {
 	}
 }
 
-// WithEnableSIGTERM enables SIGTERM behavior with the HTTP Server for use with the provided handler function(s).
-// The HTTP server will listen for SIGTERM signals and run the provided callback functions before
-// gracefully shutting down and performing cleanup tasks before the server is terminated. If the server
-// does not shut down within a certain time frame (usually 500ms), a SIGKILL signal will forcefully terminate
-// the server (similar to how AWS Lambda handles function shutdowns).
-// SIGKILL will occur ~500ms after SIGTERM.
-// Optionally, an array of callback functions to run on SIGTERM may be provided.
+// WithEnableSIGTERM enables SIGTERM behavior with the HTTP server for graceful shutdown with the optional handler function(s).
+// Graceful shutdown of the HTTP server before the provided functions are invoked with a ~500ms timeout. If the functions
+// do not complete within the timeout limit, a "SIGKILL" panic will occur. This enables testing in a local environment,
+// mimicking AWS Lambda's SIGTERM and SIGKILL behavior.
 //
 // Usage:
 //
 //	httpadapter.StartWithOptions(8080, Handler,
 //		lambda.WithEnableSIGTERM(func() {
-//			log.Print("HTTP server shutting down...")
+//			log.Print("Cleaning up application components...")
 //		})
 //	)
-func WithEnableSIGTERM(callbacks ...func()) Option {
+func WithEnableSIGTERM(sigtermFuncs ...func()) Option {
 	return Option(func(opts *adapterOptions) {
-		opts.sigtermFuncs = append(opts.sigtermFuncs, callbacks...)
+		opts.sigtermFuncs = append(opts.sigtermFuncs, sigtermFuncs...)
 		opts.enableSIGTERM = true
 	})
 }
