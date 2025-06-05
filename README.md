@@ -11,19 +11,23 @@ only HTTP triggers are supported, but additional triggers may be supported in th
 
 ### How it works
 Lambda Function in AWS:
-1. The main function calls the lambda.Start function, passing in the Handler function.
-2. AWS Lambda invokes the Handler function when an HTTP request is received.
+1. The main function calls the `lambda.Start` function, passing in the `Handler` function.
+2. AWS Lambda invokes the `Handler` function when an HTTP request is received.
+3. Alternatively, the main function can call `lambda.StartWithOptions` to enable graceful shutdown with a cleanup function.
+
 ![diagram1](docs/images/diagram1.png)
 
 Testing a Lambda Function outside of AWS:
-1. The main function calls the httpadapter.Start function, passing in the Handler function and the port number to listen on.
-2. The httpadapter listens for incoming HTTP requests on the specified port and invokes the Handler function when a request is received.
+1. The main function calls the `httpadapter.Start` function, passing in the `Handler` function and the port number to listen on.
+2. The httpadapter listens for incoming HTTP requests on the specified port and invokes the `Handler` function when a request is received.
+3. Alternatively, the main function can call `httpadapter.StartWithOptions` to enable graceful shutdown with a cleanup function.
+
 ![diagram2](docs/images/diagram2.png)
 
    
 ## Features
-* Supports APIGatewayV2HTTP, APIGatewayProxy, and ALBTargetGroup events.
-* Supports handler functions with and without context.Context parameters.
+* Supports `APIGatewayV2HTTP`, `APIGatewayProxy`, and `ALBTargetGroup` events.
+* Supports handler functions with and without `context.Context` parameters.
 * Supports both values and pointers for handler function request events.
 * Supports both values and pointers for handler function response events.
 
@@ -32,7 +36,7 @@ Testing a Lambda Function outside of AWS:
 
 ## Usage
 ### Start
-```
+```go
 package main
 
 import (
@@ -74,7 +78,7 @@ func main() {
 ```
 ### StartWithOptions WithEnableSIGTERM
 This is useful for application cleanup logic needed during graceful shutdown. The httpadapter will mimic the AWS Lambda behavior of allowing ~500ms for cleanup before it is terminated. 
-```
+```go
 package main
 
 import (
