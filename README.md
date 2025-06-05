@@ -13,14 +13,14 @@ only HTTP triggers are supported, but additional triggers may be supported in th
 Lambda Function in AWS:
 1. The main function calls the `lambda.Start` function, passing in the `Handler` function.
 2. AWS Lambda invokes the `Handler` function when an HTTP request is received.
-3. Alternatively, the main function can call `lambda.StartWithOptions` to enable graceful shutdown with a cleanup function.
+3. Alternatively, the main function can call `lambda.StartWithOptions` to enable graceful shutdown with an optional shutdown function(s).
 
 ![diagram1](docs/images/diagram1.png)
 
 Testing a Lambda Function outside of AWS:
 1. The main function calls the `httpadapter.Start` function, passing in the `Handler` function and the port number to listen on.
 2. The httpadapter listens for incoming HTTP requests on the specified port and invokes the `Handler` function when a request is received.
-3. Alternatively, the main function can call `httpadapter.StartWithOptions` to enable graceful shutdown with a cleanup function.
+3. Alternatively, the main function can call `httpadapter.StartWithOptions` to enable graceful shutdown with an optional shutdown function(s).
 
 ![diagram2](docs/images/diagram2.png)
 
@@ -77,7 +77,7 @@ func main() {
 }
 ```
 ### StartWithOptions WithEnableSIGTERM
-This is useful for application cleanup logic needed during graceful shutdown. The httpadapter will mimic the AWS Lambda behavior of allowing ~500ms for cleanup before it is terminated. 
+This is useful for application shutdown logic needed for a graceful shutdown. The httpadapter will mimic the AWS Lambda behavior of allowing ~500ms for shutdown before it is terminated. 
 ```go
 package main
 
@@ -110,7 +110,7 @@ func Handler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (event
 	}, nil
 }
 
-func cleanup() {
+func shutdown() {
     // Perform any necessary cleanup here, such as closing database connections or releasing resources.
     // This function is called during graceful shutdown.
 }
@@ -118,14 +118,14 @@ func cleanup() {
 func main() {
 	if util.IsLambdaRuntime() { 
 	    // Start AWS Lambda function with SIGTERM support for graceful shutdown. 
-	    // Cleanup logic has ~500ms to complete before it's terminated with a Lambda SIGKILL 
+	    // App shutdown logic has ~500ms to complete before it's terminated with a Lambda SIGKILL 
 	    lambda.StartWithOptions(Handler, 
-	        lambda.WithEnableSIGTERM(cleanup))
+	        lambda.WithEnableSIGTERM(shutdown))
 	} else {
 	    // Start HTTP server with SIGTERM support for graceful shutdown.
-	    // Cleanup logic has ~500ms to complete before it's terminated with a "SIGKILL" panic
+	    // App shutdown logic has ~500ms to complete before it's terminated with a "SIGKILL" panic
 	    httpadapter.StartWithOptions(8080, Handler,
-	        httpadapter.WithEnableSIGTERM(cleanup))
+	        httpadapter.WithEnableSIGTERM(shutdown))
 	}
 }
 ```
