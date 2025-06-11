@@ -63,7 +63,7 @@ func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
 	// Perform cleanup with a 500ms limit like AWS Lambda SIGTERM behavior. This will help ensure
 	// that cleanup functions can be locally tested with the same behavior as in AWS Lambda.
 	if len(opts.sigtermFuncs) > 0 {
-		logger.Info("SIGTERM: running functions (mimicking the 500ms AWS Lambda limit)")
+		logger.Info("SIGTERM: Running shutdown functions (mimicking the 500ms AWS Lambda limit)")
 		timedCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer cancel()
 		done := make(chan struct{})
@@ -75,12 +75,12 @@ func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
 		}()
 		select {
 		case <-done:
-			logger.Info("SIGTERM: functions completed")
+			logger.Info("SIGTERM: Shutdown functions completed")
 		case <-timedCtx.Done():
 			//Panic too much?  It's more attention-grabbing than an error log.
-			panic("SIGKILL: functions did not complete within the AWS Lambda limit")
+			panic("SIGKILL: Shutdown functions did not complete within the AWS Lambda limit")
 		}
 	}
 
-	logger.Info("SIGTERM: Completed successfully, exiting...")
+	logger.Info("SIGTERM: Completed, exiting...")
 }

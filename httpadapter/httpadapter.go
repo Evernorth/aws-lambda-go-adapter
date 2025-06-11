@@ -77,8 +77,9 @@ func StartWithOptions(port int, handler interface{}, options ...Option) {
 	}
 }
 
-// WithEnableSIGTERM enables SIGTERM behavior with the HTTP server for graceful shutdown with the optional handler function(s).
-// Graceful shutdown of the HTTP server before the provided functions are invoked with a ~500ms timeout. If the functions
+// WithEnableSIGTERM enables SIGTERM behavior with the HTTP server for graceful shutdown.
+// Optionally, an array of shutdown functions to run on SIGTERM may be provided.
+// After HTTP server graceful shutdown, the provided functions are invoked within a ~500ms timeout. If the shutdown functions
 // do not complete within the timeout limit, a "SIGKILL" panic will occur. This enables testing in a local environment,
 // mimicking AWS Lambda's SIGTERM and SIGKILL behavior.
 //
