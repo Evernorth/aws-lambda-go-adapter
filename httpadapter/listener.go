@@ -50,7 +50,7 @@ func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
 	<-sigCtx.Done()
 	logger.Info("SIGTERM: Shutting server down gracefully...")
 
-	// Create a context with a timeout for a limited clean server shutdown (5s should be plenty, right?)
+	// Create a context with a timeout for a limited clean server shutdown (5s should be plenty)
 	// Shutdown usually completes much faster, of course.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -77,7 +77,7 @@ func sigtermListenAndServe(server *http.Server, opts *adapterOptions) {
 		case <-done:
 			logger.Info("SIGTERM: Shutdown functions completed")
 		case <-timedCtx.Done():
-			//Panic too much?  It's more attention-grabbing than an error log.
+			//Panic is more attention-grabbing than an error log.
 			panic("SIGKILL: Shutdown functions did not complete within the AWS Lambda limit")
 		}
 	}
